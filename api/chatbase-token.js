@@ -1,4 +1,3 @@
-// api/chatbase-token.js
 const crypto = require("crypto");
 
 module.exports = (req, res) => {
