@@ -1,37 +1,18 @@
-export const config = {
-  runtime: 'edge',
-};
+// api/chatbase-token.js
+const crypto = require("crypto");
 
-export default async function handler(req) {
-  const { searchParams } = new URL(req.url);
-  const userId = searchParams.get('userId');
+module.exports = (req, res) => {
+  const { userId } = req.query;
   const secret = process.env.CHATBASE_SECRET;
 
   if (!userId || !secret) {
-    return new Response(JSON.stringify({ error: 'Missing userId or secret' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(400).json({ error: "Missing userId or secret" });
   }
 
-  const encoder = new TextEncoder();
-  const key = encoder.encode(secret);
-  const data = encoder.encode(userId);
+  const signature = crypto
+    .createHmac("sha256", secret)
+    .update(userId)
+    .digest("hex");
 
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    key,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signatureArrayBuffer = await crypto.subtle.sign('HMAC', cryptoKey, data);
-  const hashArray = Array.from(new Uint8Array(signatureArrayBuffer));
-  const signature = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-  return new Response(JSON.stringify({ userId, signature }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+  return res.status(200).json({ userId, signature });
+};
